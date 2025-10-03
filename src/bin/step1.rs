@@ -22,19 +22,12 @@
 */
 
 pub struct Solution {}
-impl Solution {
-    pub fn add(left: u64, right: u64) -> u64 {
-        left + right
-    }
-}
+impl Solution {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let result = Solution::add(2, 2);
-        assert_eq!(result, 4);
-    }
+    fn step1_test() {}
 }
