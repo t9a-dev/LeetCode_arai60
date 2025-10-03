@@ -19,10 +19,6 @@ impl Solution {
     }
 }
 
-fn main() {
-    Solution::add(1, 2);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

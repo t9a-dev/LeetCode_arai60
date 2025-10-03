@@ -36,10 +36,8 @@ PR: [GitHub Pull Requestへのリンク](https://example.com)
 https://github.com/irohafternoon/LeetCode/blob/49.-Group-Anagrams/README.md#%E7%B7%B4%E7%BF%92%E6%96%B9%E6%B3%95
 
 # 実行方法
-### コードの実行
-`cargo run --bin step1`
-
-### テストの実行
+### テストコードの実行
+解いた問題をテストコードにより手元で検証している。最終的にはLeetCodeにアップロードするが、より高速かつ手軽に書いたコードの検証を行えるため。  
 `cargo test --bin step1`
 
 # 参考リンク
