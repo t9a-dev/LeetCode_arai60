@@ -15,10 +15,13 @@
 
 - Discordのレビュー依頼チャンネルに投稿する
 ``` md
-問題: [問題へのリンク](https://example.com)
-PR: [GitHub Pull Requestへのリンク](https://example.com)
+お世話になっております。
+49. Group Anagrams　に取り組みました。
+お手すきの際にレビューをお願いいたします。
+問題: https://leetcode.com/problems/group-anagrams/description/
+PR: https://github.com/t9a-dev/LeetCode_arai60/pull/2
 言語: Rust
-直近で同じ問題を解いている5人をメンションする(Discordの検索で問題へのリンクから検索するのが良さそう)
+<直近で同じ問題を解いた5人のメンション>
 ```
 
 # 練習方法
