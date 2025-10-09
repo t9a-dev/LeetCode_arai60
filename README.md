@@ -10,7 +10,7 @@
 ```md
 問題: [問題へのリンク](https://example.com)
 次に解く問題: [次に解く問題へのリンク](https://example.com)
-ファイルの構成: `./src/bin/<step1.rs|step2.rs|step3.rs>`
+ファイルの構成: `./src/bin/<各ステップ>.rs`
 ```
 
 - Discordのレビュー依頼チャンネルに投稿する
