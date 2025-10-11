@@ -101,7 +101,7 @@ mod tests {
     }
 
     #[test]
-    fn canonicalize_sendable_email_address_test() {
+    fn step2_canonicalize_sendable_email_address_test() {
         assert_eq!(
             Solution::canonicalize_email_address("asdf.+asdf@leetcode.com"),
             Some("asdf@leetcode.com".to_string())
