@@ -27,7 +27,7 @@ impl Solution {
     pub fn has_cycle(head: Option<Rc<RefCell<ListNode>>>) -> bool {
         let (mut slow_node, mut fast_node) = {
             let current = head.as_ref().map(Rc::clone);
-            let next = head.and_then(|next_node| next_node.borrow().next.as_ref().map(Rc::clone));
+            let next = head.and_then(|head_node| head_node.borrow().next.as_ref().map(Rc::clone));
 
             (current, next)
         };
