@@ -1,41 +1,22 @@
-// Step2
-// 目的: 自然な書き方を考えて整理する
-
-// 方法
-// Step1のコードを読みやすくしてみる
-// 他の人のコードを2つは読んでみること
-// 正解したら終わり
-
-// 以下をメモに残すこと
-// 講師陣はどのようなコメントを残すだろうか？
-// 他の人のコードを読んで考えたこと
-// 改善する時に考えたこと
+// Step2_1
+// 目的: floyd's cycle detectionの実装をしてみる。
 
 /*
-  他の人のコードを読んで考えたこと
-  - 「フロイドの循環検出法」というアルゴリズムでこの問題を解けそうだということが分かった。
   フロイドの循環検出法では２人の内1人が一歩先にいる状態から走査をスタートする。
   サイクルごとに2人の現在位置が同じでないかを確認していき同じであれば循環しているので走査を終了。
-  サイクルごとにスタート位置が手前の方は一歩ずつ進む。一歩先にいる方は2歩進んでいく。
+  サイクルごとにスタート位置が手前の方は一歩ずつ進む。一歩先にいる方は二歩進んでいく。
   一歩先の人が次のノードを見つけられなければ循環していないので終了。
   この方法では走査しながら確認できる（ワンパス）ので追加の補助空間計算量がかからず、空間計算量がO(1)となる。
-  step2_1_floyds_cycle_detection.rsで一応実装してみる。
   https://leetcode.com/problems/linked-list-cycle/solutions/4831939/brute-optimal-both-approach-full-explained-java-c-python3-rust-go-javascript/
-  - いくつかコードを読んだが上記のアルゴリズムか、自分の採用したHashSetを用いた解法くらいしか見当たらなかった。
-  - 問題を解くこと自体よりもLeetCodeがRustに対応していなかったので単方向リンクリスト自体を実装する必要が出てきたのが良い経験になった。
-  単方向リンクリストの循環検出方法自体はすぐに思いついた。単方向リンクリスト自体の実装に苦戦したがRustの理解が深まった。
-
-  改善する時に考えたこと
-  - 変数名について単にnodeとしていた箇所をcurrent_nodeにすることで、曖昧さを軽減した。
-  - よく理解せずに混乱しながら利用していたRwLock<T>,Box<T>の利用をやめた。
-  - Rc<T>のデータに対しては.clone()ではなくRc::clone()で明示的にリファレンスカウンタをインクリメントするようにした。
-  内部的には同じだが、公式ドキュメントで明示的に使い分けることが推奨されていたため。
-  https://doc.rust-jp.rs/book-ja/ch15-04-rc.html#:~:text=%E3%81%A6%E3%81%84%E3%81%BE%E3%81%99%E3%80%82-,Rc,%E3%81%99
-
-  - テストコードで利用しているbuild_list_with_cycleについて、インデックスアクセスの方法を添字からgetによる安全な(エラーハンドリング可能な)方法にする。
 */
 
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
+/*
+  入力のリンクリストのサイズをNとする
+  時間計算量: O(N) 全走査するため
+  空間計算量: O(1) 全走査しながらインプレイスで重複チェックしており、HashSetなどに記録していないため
+*/
+
+use std::{cell::RefCell, rc::Rc};
 
 pub struct ListNode {
     pub next: Option<Rc<RefCell<ListNode>>>,
@@ -44,15 +25,25 @@ pub struct ListNode {
 pub struct Solution {}
 impl Solution {
     pub fn has_cycle(head: Option<Rc<RefCell<ListNode>>>) -> bool {
-        let mut visited_node: HashSet<_> = HashSet::new();
-        let mut next_node = head;
+        let (mut slow_node, mut fast_node) = {
+            let current = head.as_ref().map(Rc::clone);
+            let next = head.and_then(|head_node| head_node.borrow().next.as_ref().map(Rc::clone));
 
-        while let Some(current_node) = next_node {
-            if !visited_node.insert(current_node.as_ptr()) {
+            (current, next)
+        };
+
+        while let (Some(slow), Some(fast)) = (slow_node, fast_node) {
+            if Rc::ptr_eq(&slow, &fast) {
                 return true;
             }
 
-            next_node = current_node.borrow().next.as_ref().map(Rc::clone);
+            slow_node = slow.borrow().next.as_ref().map(Rc::clone);
+            fast_node = fast
+                .as_ref()
+                .borrow()
+                .next
+                .as_ref()
+                .and_then(|next_node| next_node.as_ref().borrow().next.as_ref().map(Rc::clone));
         }
 
         false
@@ -79,7 +70,7 @@ mod tests {
         // nodeのnextに接続する
         for (i, node) in nodes.iter().enumerate() {
             if let Some(next_node) = nodes.get(i + 1) {
-                node.borrow_mut().next = Some(Rc::clone(next_node));
+                node.borrow_mut().next = Some(Rc::clone(&next_node));
             }
         }
 
@@ -96,7 +87,7 @@ mod tests {
     }
 
     #[test]
-    fn step2_no_cycle_test() {
+    fn step2_1_no_cycle_test() {
         let expect = false;
         let no_cycle = build_list_with_cycle(None, 4);
         assert_eq!(Solution::has_cycle(no_cycle), expect);
@@ -112,7 +103,7 @@ mod tests {
     }
 
     #[test]
-    fn step1_with_cycle_test() {
+    fn step2_1_with_cycle_test() {
         let expect = true;
         let with_cycle = build_list_with_cycle(Some(1), 4);
         assert_eq!(Solution::has_cycle(with_cycle), expect);
