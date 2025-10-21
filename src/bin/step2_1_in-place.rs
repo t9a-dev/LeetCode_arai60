@@ -106,12 +106,11 @@ mod tests {
 
     fn list_node_to_vec(head: &Option<Box<ListNode>>) -> Vec<i32> {
         let mut out = Vec::new();
-        let mut next_node = head;
+        let mut current_node = head;
 
-        while let Some(node) = next_node {
+        while let Some(node) = current_node {
             out.push(node.val);
-
-            next_node = &node.next;
+            current_node = &node.next;
         }
 
         out
