@@ -8,26 +8,76 @@
 // 正解したら終わり
 
 /*
+  問題の理解
+  '()[]{}'を含む文字列が与えられるので、対応するペアで正しく閉じられているかどうかを判定して返す。
+  '()' -> true
+  '([])' -> true
+  '([)]' -> false
+
   何がわからなかったか
-  -
+  - 括弧が正しく閉じられているかをシンプルに判定するアルゴリズムが思いつかなかった。
 
   何を考えて解いていたか
-  -
+  開き括弧: '(','[','{'、 閉じ括弧: ')',']','}'
+  - 文字列を先頭から順に見ていく
+  - 開き括弧を探す。最後に見つけた開き括弧は保存しておく。閉じ括弧に当たるまで繰り返す。
+    - 閉じ括弧を見つけたら、保存しておいた開き括弧と対応するものか判定する。
+      - 対応しないものであればこの時点で早期リターンfalse
+      - 対応するものであれば、走査対象の文字列からこの括弧のペアを取り除く
+  - ここまで考えたが条件を書き下してくのはコードが複雑になりすぎて、筋が悪そうなので実装例を見ることにした。
+  - 問題を見た当初はNandToTetrisで作ったコンパイラ周りの知識が使えそうなので解けるだろうと思ったが、いざ書こうと思うと手が止まってしまった。
+  NandToTetrisでやったときは仕様自体が細かく書かれており、Rustのコンパイルをどうやって通すかといった作業になってしまっていたのが原因だろうと思った。
+
+  参考にした解法と解法の理解
+  https://leetcode.com/problems/valid-parentheses/solutions/500491/rust-0ms/
+  - スタックを利用した解法
+    - 文字列を全走査する。
+      - 開き括弧を見つけるたびに対応する閉じ括弧をスタックにプッシュする。
+      - 閉じ括弧を見つけたらスタックからポップして、見つけた閉じ括弧とポップした閉じ括弧が異なればfalseで早期リターン。
+    - 文字列を全走査して、スタックが空であれば括弧が全て対応していたことになる。
+      - 空でなければペアが不足しているのでfalseでリターン。
+      - つまりスタックが空かどうかを最終的に返す。
 
   想定ユースケース
-  -
+  - 括弧が正しく閉じられているかの構文チェック
 
   正解してから気づいたこと
-  -
+  - 括弧意外は無視されるようになっているので実用的だと思った。
+  - 開き括弧に対応する閉じ括弧との対応が視覚的にもわかりやすく特にこの解法に違和感は感じない。
+  - 手作業で行う方法をコードにする練習という意味で別の実装(再帰下降型など)をしてみた方が良さそうだと思った。
+  この解法自体は良いと思うが改善点が無いので練習という関連から得られるものがほぼ無い。
+
 */
 
 pub struct Solution {}
-impl Solution {}
+impl Solution {
+    pub fn is_valid(s: String) -> bool {
+        let mut closing_brackets = Vec::new();
+
+        for c in s.chars() {
+            match c {
+                '(' => closing_brackets.push(')'),
+                '[' => closing_brackets.push(']'),
+                '{' => closing_brackets.push('}'),
+                ')' | ']' | '}' if Some(c) != closing_brackets.pop() => return false,
+                _ => (),
+            }
+        }
+
+        closing_brackets.is_empty()
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn step1_test() {}
+    fn step1_test() {
+        assert_eq!(Solution::is_valid("[]".to_string()), true);
+        assert_eq!(Solution::is_valid("[()]".to_string()), true);
+        assert_eq!(Solution::is_valid("[](){}".to_string()), true);
+        assert_eq!(Solution::is_valid("[a]a(a)a{a}a".to_string()), true);
+        assert_eq!(Solution::is_valid("([)]".to_string()), false);
+    }
 }
