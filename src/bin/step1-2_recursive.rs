@@ -1,27 +1,20 @@
-// Step3
-// 目的: 覚えられないのは、なんか素直じゃないはずなので、そこを探し、ゴールに到達する
+// Step1
+// 目的: コードの変形練習のため別の解法で実装する
 
-// 方法
-// 時間を測りながらもう一度解く
-// 10分以内に一度もエラーを吐かず正解
-// これを3回連続でできたら終わり
-// レビューを受ける
-// 作れないデータ構造があった場合は別途自作すること
+/*
+  何を考えて解いていたか
+  - headが与えられたときにnextがNoneになるまで再帰で潜っていって、ListNodeを返しながら戻る方法を思いついてので実装してみる。
+  この方向で実装できそうな気はしたが、自分で実装できなかったのでChatGPTに実装してもらって写経した。
+  コードは読めるが実装で詰まるので、再帰処理の実装に慣れていく段階なのかなと思った。
+
+  正解してから気づいたこと
+  - step1_recursive.rsと比べたときに番兵を使わず、再帰処理だけで実装できているのでこちらの方がシンプルで分かりやすいと思った。
+*/
 
 /*
   Nは入力全体のサイズとする。
   時間計算量: O(N) 入力のノードを全走査している。
-  空間計算量: O(N) 入力のノードの値を全てスタックに積んでいる。
-*/
-
-/*
-  1回目: 4分34秒
-  2回目: 3分15秒
-  3回目: 2分28秒
-*/
-
-/*
-  step1のスタックを利用した実装が一番自然だと思った。
+  空間計算量: O(1) 入力の参照移動だけで済んでおり追加のメモリ領域を確保していない。
 */
 
 pub struct ListNode {
@@ -38,21 +31,21 @@ impl ListNode {
 pub struct Solution {}
 impl Solution {
     pub fn reverse_list(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
-        let mut node_values = vec![];
-        let mut target_node = head;
-        let mut dummy = Box::new(ListNode::new(0));
-        let mut tail = dummy.as_mut();
+        Self::reverse_list_node(None, head)
+    }
 
-        while let Some(node) = target_node {
-            node_values.push(node.val);
-            target_node = node.next;
+    fn reverse_list_node(
+        previous: Option<Box<ListNode>>,
+        current: Option<Box<ListNode>>,
+    ) -> Option<Box<ListNode>> {
+        match current {
+            Some(mut node) => {
+                let next_node = node.next.take();
+                node.next = previous;
+                Self::reverse_list_node(Some(node), next_node)
+            }
+            None => previous,
         }
-
-        while let Some(v) = node_values.pop() {
-            tail = tail.next.insert(Box::new(ListNode::new(v)));
-        }
-
-        dummy.next
     }
 }
 
@@ -78,8 +71,9 @@ mod tests {
 
         out
     }
+
     #[test]
-    fn step3_test() {
+    fn step1_2_recursive_test() {
         let source_vec = vec![5, 4, 3, 2, 1];
         let head = vec_to_list_node(&source_vec);
         assert_eq!(list_node_to_vec(&head), source_vec);
