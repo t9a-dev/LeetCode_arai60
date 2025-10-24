@@ -1,27 +1,27 @@
-// Step3
-// 目的: 覚えられないのは、なんか素直じゃないはずなので、そこを探し、ゴールに到達する
+// Step1
+// 目的: 方法を思いつく
 
 // 方法
-// 時間を測りながらもう一度解く
-// 10分以内に一度もエラーを吐かず正解
-// これを3回連続でできたら終わり
-// レビューを受ける
-// 作れないデータ構造があった場合は別途自作すること
+// 5分考えてわからなかったら答えをみる
+// 答えを見て理解したと思ったら全部消して答えを隠して書く
+// 5分筆が止まったらもう一回みて全部消す
+// 正解したら終わり
 
 /*
-  Nは入力全体のサイズとする。
-  時間計算量: O(N) 入力のノードを全走査している。
-  空間計算量: O(N) 入力のノードの値を全てスタックに積んでいる。
-*/
+  問題の理解
+  - ノードが持つ値で降順ソートされた単方向リンクリストが与えられる。
+  与えられた単方向リンクリストの値に基づいて昇順ソートした単方向リンクリストを返す。
 
-/*
-  1回目: 4分34秒
-  2回目: 3分15秒
-  3回目: 2分28秒
-*/
+  何を考えて解いていたか
+  - 走査しながらstackにプッシュしていく。(out-of-place処理)
+  - stackからpopしながらdummy(番兵)ノードにつなげていく。
+  - dummy.nextを返す。
+  - 問題が簡単に感じられるので、in-placeによる実装と再帰処理による実装もしてみる。
 
-/*
-  step1のスタックを利用した実装が一番自然だと思った。
+  正解してから気づいたこと
+  - 特に迷うこと無く初めて一発で通った。
+  - この解法では番兵(dummy)とスタックを利用している。
+  - 改善する点も見当たらないので再帰処理を利用した実装を練習する。
 */
 
 pub struct ListNode {
@@ -38,8 +38,8 @@ impl ListNode {
 pub struct Solution {}
 impl Solution {
     pub fn reverse_list(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
-        let mut node_values = vec![];
         let mut target_node = head;
+        let mut node_values = vec![];
         let mut dummy = Box::new(ListNode::new(0));
         let mut tail = dummy.as_mut();
 
@@ -48,8 +48,8 @@ impl Solution {
             target_node = node.next;
         }
 
-        while let Some(v) = node_values.pop() {
-            tail = tail.next.insert(Box::new(ListNode::new(v)));
+        while let Some(node_value) = node_values.pop() {
+            tail = tail.next.insert(Box::new(ListNode::new(node_value)));
         }
 
         dummy.next
@@ -79,7 +79,7 @@ mod tests {
         out
     }
     #[test]
-    fn step3_test() {
+    fn step1_sentinel_and_stack_test() {
         let source_vec = vec![5, 4, 3, 2, 1];
         let head = vec_to_list_node(&source_vec);
         assert_eq!(list_node_to_vec(&head), source_vec);
