@@ -1,29 +1,30 @@
-// Step3
-// 目的: 覚えられないのは、なんか素直じゃないはずなので、そこを探し、ゴールに到達する
-
-// 方法
-// 時間を測りながらもう一度解く
-// 10分以内に一度もエラーを吐かず正解
-// これを3回連続でできたら終わり
-// レビューを受ける
-// 作れないデータ構造があった場合は別途自作すること
-
-/*
-  Nは入力のサイズとする。kは引数の値に対応。
-  時間計算量: O(N log k)  <- BinaryHeapのpop操作が支配的なのでO(log N)かと思ったが違った。最小ヒープ方式でヒープサイズをkにしてN回繰り返している。
-  空間計算量: O(N) <- 出現頻度を管理するHashMapが支配的。
-*/
-
-/*
-  1回目: 7分3秒
-  2回目: 5分43秒
-  3回目: 5分5秒
-*/
+// Step1a
+// 目的: step1のリファクタリング
 
 use std::{
     cmp::Reverse,
     collections::{BinaryHeap, HashMap},
 };
+
+#[derive(PartialEq, Eq)]
+pub struct FrequencyEntry {
+    value: i32,
+    count: i32,
+}
+
+impl Ord for FrequencyEntry {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.count
+            .cmp(&other.count)
+            .then_with(|| self.value.cmp(&other.value))
+    }
+}
+
+impl PartialOrd for FrequencyEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.count.partial_cmp(&other.count)
+    }
+}
 
 pub struct Solution;
 
@@ -35,7 +36,7 @@ impl Solution {
 
         let k = k as usize;
         let mut frequency_by_value: HashMap<_, _> = HashMap::new();
-        let mut top_k_heap: BinaryHeap<Reverse<(_, _)>> = BinaryHeap::new();
+        let mut top_k_heap: BinaryHeap<Reverse<FrequencyEntry>> = BinaryHeap::new();
 
         for num in nums {
             frequency_by_value
@@ -45,31 +46,38 @@ impl Solution {
         }
 
         for (value, frequency) in frequency_by_value {
-            let entry = Reverse((frequency, value));
+            let entry = Reverse(FrequencyEntry {
+                value,
+                count: frequency,
+            });
 
             if top_k_heap.len() < k {
                 top_k_heap.push(entry);
                 continue;
             }
 
-            if let Some(Reverse((peeked_frequency, _))) = top_k_heap.peek() {
-                if *peeked_frequency < frequency {
+            if let Some(Reverse(peeked_entry)) = top_k_heap.peek() {
+                if peeked_entry.count < entry.0.count {
                     top_k_heap.pop();
                     top_k_heap.push(entry);
                 }
             }
         }
 
-        top_k_heap.into_iter().map(|Reverse((_, v))| v).collect()
+        top_k_heap
+            .into_iter()
+            .map(|Reverse(entry)| entry.value)
+            .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
-    fn step3_test() {
+    fn step1a_test() {
         let mut result = Solution::top_k_frequent(vec![1, 1, 1, 2, 2, 3], 2);
         result.sort();
         assert_eq!(result, vec![1, 2]);
