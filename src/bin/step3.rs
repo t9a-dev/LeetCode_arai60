@@ -96,7 +96,6 @@ impl Solution {
             if x > 0 {
                 Self::explore_islands(grid, x - 1, y);
             }
-
             if y > 0 {
                 Self::explore_islands(grid, x, y - 1);
             }
