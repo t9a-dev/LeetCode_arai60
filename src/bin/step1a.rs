@@ -1,41 +1,25 @@
-// Step2
-// 目的: 自然な書き方を考えて整理する
-
-// 方法
-// Step1のコードを読みやすくしてみる
-// 他の人のコードを2つは読んでみること
-// 正解したら終わり
-
-// 以下をメモに残すこと
-// 講師陣はどのようなコメントを残すだろうか？
-// 他の人のコードを読んで考えたこと
-// 改善する時に考えたこと
+// Step1a
+// 目的: step1でテストケースを通らないコードが出来上がったので答えを見て実装する
 
 /*
-  他の人のコードを読んで考えたこと
-  - Rustで参考にした実装例のうち、より速い実装は双方向探索という手法を使っている。
+  参考にした実装の理解
+  一番上のadjacency list + BFSを見て何をしているのか理解する。
   https://leetcode.com/problems/word-ladder/solutions/1765599/rust-4-implementations-150ms-150ms-30ms1-s55f/
-  https://ja.wikipedia.org/wiki/%E5%8F%8C%E6%96%B9%E5%90%91%E6%8E%A2%E7%B4%A2
 
-  - wordの一部を'*'に置き換えているコードを良く見かけたがこの実装例が一番読みやすそう。
-  https://github.com/nanae772/leetcode-arai60/pull/20/files#diff-13ef01ef57c904df745ace8ac16b92c0bc3c7a92721af9beae85ca88d673b691
+  - 自分のコードとほぼやっていることはほぼ同じ。
+  単語のカウント=BFSで探索している階層となっていて、探索した階層にある単語を全て探索済としてHashSetに入れている。
+  階層は1からカウントし始めている。begin_wordから確認し始めるのでこの時点でカウントは1になる。（正し、end_wordがword_listに存在するとき）
 
-  - 今回の問題の制約的には大丈夫だが、wordの一部を'*'で分けることによって、入力文字列自体に'*'が含まれると動かなくなるという視点
-  https://github.com/5103246/LeetCode_Arai60/pull/19#discussion_r2401405343
+  - 一文字違いの判定方法が間違っている。
+  intersectionで集合を取ると、同じ文字が重複して取り除かれるので正しく判定できない。
+  "aba","aaa"は一文字だけ違うので隣接すべきだが、HashSetにすると、set("a","b"),set("a")となり、intersectionの結果のカウントは1、元の文字列長さとの差が2となり隣接として判定できない。
 
-  - 双方向BFSが実装されていて参考になる。
-  https://github.com/docto-rin/leetcode/pull/19/files#diff-218e9bbed203d0e7ad1153f2f93997efe5e59485c5e96a9cc8f4ea6d1f88baf9R204
-
-  他の想定ユースケース
-  - 予測変換のようだと感じたと書いている人がいて、言われてみないと気づかないなと思った。
-  https://github.com/quinn-sasha/leetcode/pull/20/files#diff-82931f5f56465800e967d857a53ed845fa63606b4740957bd7b56c4ec7e7805cR3
-
-  改善する時に考えたこと
-  - 隣接ワードの判定メソッド命名を変更 is_one_diff -> is_adjacency_word
-  - 変数宣言部分と処理部分の間に改行を入れてグループを分けた。
-  - is_adjacency_wordのループ内先頭でガード節を利用しているが、一度目は必ず意味のない比較を実行しているので、ループ末尾に移そうか迷った。
-    - 無駄な比較はするものの、読みやすさの方がメリットが大きいと考えてそのままガード節にした。
-  - 双方向BFSを実装してみるほど余裕が無いので手法が存在することだけ頭に入れておく。
+  正解してから気づいたこと
+  - intersectionの動き方を誤って理解していたのが致命的だった。普段使わないのでしっかりとドキュメントを確認するべきだった。
+  - DFS,BFSは理解したと思っていたが、木構造の階層をカウントするといった発想がなかった。
+  - このナイーブな実装だとLeet Code上の採点システムで100~200ms前後であり、より速い実装がある。
+    - より速い実装例もあるようだがだいぶ時間を使ったのでスキップ
+      - 殆どの問題が一発で解けないが、解けそうに見える問題が増えて来たこともあり、変に粘ってしまって時間を浪費している気がするのでもう少し早めに切り上げようと思った。
 */
 
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -49,11 +33,11 @@ impl Solution {
 
         let mut adjacency_words_by_word: HashMap<&str, Vec<&str>> = HashMap::new();
         let mut merged_word_list = vec![begin_word.clone()];
+        merged_word_list.extend_from_slice(word_list.as_slice());
 
-        merged_word_list.extend_from_slice(&word_list);
         for (i, word1) in merged_word_list.iter().enumerate() {
             for word2 in merged_word_list.iter().skip(i + 1) {
-                if !Self::is_adjacency_word(&word1, &word2) {
+                if !Self::is_one_diff(&word1, &word2) {
                     continue;
                 }
 
@@ -70,8 +54,8 @@ impl Solution {
 
         let mut visited_words: HashSet<&str> = HashSet::new();
         let mut laddering_words = VecDeque::new();
-
         laddering_words.push_back((begin_word.as_str(), 1));
+
         while let Some((word, depth)) = laddering_words.pop_front() {
             if word == &end_word {
                 return depth;
@@ -89,11 +73,10 @@ impl Solution {
                 laddering_words.push_back((word, depth + 1));
             }
         }
-
         0
     }
 
-    fn is_adjacency_word(a: &str, b: &str) -> bool {
+    fn is_one_diff(a: &str, b: &str) -> bool {
         if a.len() != b.len() {
             return false;
         }
@@ -118,26 +101,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn step2_ladder_word_judge_test() {
+    fn step1a_ladder_word_judge_test() {
         // ladder
-        assert!(Solution::is_adjacency_word("abc", "abx"));
-        assert!(Solution::is_adjacency_word("abx", "abc"));
-        assert!(Solution::is_adjacency_word("abc", "dbc"));
-        assert!(Solution::is_adjacency_word("dbc", "abc"));
-        assert!(Solution::is_adjacency_word("code", "codx"));
-        assert!(Solution::is_adjacency_word("codx", "code"));
-        assert!(Solution::is_adjacency_word("axc", "abc"));
-        assert!(Solution::is_adjacency_word("abc", "axc"));
+        assert!(Solution::is_one_diff("abc", "abx"));
+        assert!(Solution::is_one_diff("abx", "abc"));
+        assert!(Solution::is_one_diff("abc", "dbc"));
+        assert!(Solution::is_one_diff("dbc", "abc"));
+        assert!(Solution::is_one_diff("code", "codx"));
+        assert!(Solution::is_one_diff("codx", "code"));
+        assert!(Solution::is_one_diff("axc", "abc"));
+        assert!(Solution::is_one_diff("abc", "axc"));
 
         // not ladder
-        assert!(!Solution::is_adjacency_word("abc", "abc"));
-        assert!(!Solution::is_adjacency_word("hit", "cog"));
-        assert!(!Solution::is_adjacency_word("cog", "hit"));
-        assert!(!Solution::is_adjacency_word("", ""));
+        assert!(!Solution::is_one_diff("abc", "abc"));
+        assert!(!Solution::is_one_diff("hit", "cog"));
+        assert!(!Solution::is_one_diff("cog", "hit"));
+        assert!(!Solution::is_one_diff("", ""));
     }
 
     #[test]
-    fn step2_test() {
+    fn step1a_test() {
         let (begin_word, end_word, word_list) = (
             "hit",
             "cog",
@@ -191,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn step2_not_exists_end_word_test() {
+    fn step1a_not_exists_end_word_test() {
         let (begin_word, end_word, word_list) = (
             "hit",
             "cog",
@@ -211,7 +194,7 @@ mod tests {
     }
 
     #[test]
-    fn step2_invalid_input_test() {
+    fn step1a_invalid_input_test() {
         let (begin_word, end_word, word_list) = (
             "hit",
             "",
