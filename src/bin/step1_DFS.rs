@@ -1,26 +1,13 @@
-// Step3
-// 目的: 覚えられないのは、なんか素直じゃないはずなので、そこを探し、ゴールに到達する
-
-// 方法
-// 時間を測りながらもう一度解く
-// 10分以内に一度もエラーを吐かず正解
-// これを3回連続でできたら終わり
-// レビューを受ける
-// 作れないデータ構造があった場合は別途自作すること
+// Step1_DFS
+// 目的: 再帰による深さ優先探索の実装も練習しておく
 
 /*
-  n = nodes.len() rootは二分木の根。rootを含めたノードの総数をnとする。
-  時間計算量: O(n)
-  空間計算量: O(n)
+  所感
+  - あまり自信が無いまま書いて通ったので、再帰処理はまだまだ苦手だなと思った。
+  - 個人的にはキューを利用したBFSの実装が自然に書けると思った。
 */
 
-/*
-  1回目: 3分49秒
-  2回目: 2分19秒
-  3回目: 2分45秒
-*/
-
-use std::{cell::RefCell, collections::VecDeque, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 pub struct TreeNode {
     pub val: i32,
@@ -37,26 +24,22 @@ impl TreeNode {
         }
     }
 }
+
 pub struct Solution {}
 impl Solution {
     pub fn max_depth(root: Option<Rc<RefCell<TreeNode>>>) -> i32 {
-        let mut max_depth = 0;
-        let mut frontiers = VecDeque::new();
+        Self::explore_max_depth(&root, 0)
+    }
 
-        frontiers.push_back((root, 1));
-        while let Some((node, depth)) = frontiers.pop_front() {
-            let Some(node) = node else {
-                continue;
-            };
+    fn explore_max_depth(node: &Option<Rc<RefCell<TreeNode>>>, depth: i32) -> i32 {
+        let Some(node) = node else {
+            return depth;
+        };
 
-            max_depth = depth;
+        let left_depth = Self::explore_max_depth(&node.borrow().left.clone(), depth + 1);
+        let right_depth = Self::explore_max_depth(&node.borrow().right.clone(), depth + 1);
 
-            let node = node.borrow();
-            frontiers.push_back((node.left.as_ref().map(Rc::clone), depth + 1));
-            frontiers.push_back((node.right.as_ref().map(Rc::clone), depth + 1));
-        }
-
-        max_depth
+        left_depth.max(right_depth)
     }
 }
 
@@ -119,13 +102,13 @@ mod tests {
     }
 
     #[test]
-    fn step3_helper_method_test() {
+    fn step1_bfs_helper_method_test() {
         let node_values = vec![Some(3), Some(9), Some(20), None, None, Some(15), Some(7)];
         assert_eq!(to_node_values(&to_tree_nodes(&node_values)), node_values);
     }
 
     #[test]
-    fn step3_test() {
+    fn step1_bfs_test() {
         let node_values = vec![Some(3)];
         assert_eq!(Solution::max_depth(to_tree_nodes(&node_values)), 1);
 
