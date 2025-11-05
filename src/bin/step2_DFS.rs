@@ -1,46 +1,29 @@
-// Step2
-// 目的: 自然な書き方を考えて整理する
-
-// 方法
-// Step1のコードを読みやすくしてみる
-// 他の人のコードを2つは読んでみること
-// 正解したら終わり
-
-// 以下をメモに残すこと
-// 講師陣はどのようなコメントを残すだろうか？
-// 他の人のコードを読んで考えたこと
-// 改善する時に考えたこと
+// Step2_DFS
+// 目的: step1_DFSの自然な書き方を練習
 
 /*
-  講師陣はどのようなコメントを残すだろうか？
-  - 変数名はfrontiersで十分だと思うが、情報が少ないと言われるかも
-
   他の人のコードを読んで考えたこと
-  - IsLeafメソッドで条件文に意味をつけるのは明示的でよいと思った。
-  今回の問題では一度しか記述しないので関数呼出しではなく、条件文の結果をis_leaf変数に入れてis_leafをifで使う形にするかなと思った。
-  https://github.com/nktr-cp/leetcode/pull/23/files#diff-d16010dc25fbb50a03680c436bbb0d90f462bf27b3aa26421f1df94d5f15aa15R14
+  - 再帰用のメソッドを別に作成しなくても良いことを以下のコードを見て気がついた。
+  https://github.com/quinn-sasha/leetcode/pull/21/files#diff-c2ef246709da963a01dc6a50ecb5b5ce1169312bb960fb96731d87c76e1aa8a4R31-R42
 
-  - min_depthの初期状態を十分に大きな値にするかはstep1_DFS.rsで迷った。最終的にはOption<i32>にして、初期状態をNoneにすることにした。
-  入力の制約上問題ないがi32::MAXするとノードの深さはusizeとなるのでこのサイズを超えてくるケースが頭をよぎったのが理由。この場合スタックオーバーフローも考慮しないといけない気がする。
-  usize:MAXが正しい一番ベストな気がするが、Leet Codeのテンプレートがi32なのでシグネチャを変更できない状況でusize::MAXはコードがごちゃごちゃするだけだなとも思った。
-  入力の制約上問題ないということであれば、i32::MAXがベストだと思った。
-  https://github.com/ryosuketc/leetcode_arai60/pull/22/files#diff-ff988bc6c0d45d057d973bd022c67c1b9bbca2af9a90210dd4912f9865a1ac36R20
-
-  改善する時に考えたこと
-  - 過剰かもしれないが、is_leaf変数に判定条件を入れて明示的にする。意図を明確にするだけなら一度だけしか記述しないのでメソッドに切り出す必要は無いと考えた。
+  所感
+  - 分からなかったのは、再帰処理中にノードが無いときにreturn する値とその値をreturnしたときに帰りがけでどのように処理するかだと思った。
+  正直答えを見ても自分で書ける気がしない。
+  特にleft_depth == 0, right_depth == 0でそれぞれ逆のノードの深さを足している部分が直感的に分からない。
+  - このコードを読んだときにleaf（子を持たないノード）を探していることは一発でわからないと思った。
 */
 
-use std::{cell::RefCell, collections::VecDeque, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 pub struct TreeNode {
-    val: i32,
-    left: Option<Rc<RefCell<TreeNode>>>,
-    right: Option<Rc<RefCell<TreeNode>>>,
+    pub val: i32,
+    pub left: Option<Rc<RefCell<TreeNode>>>,
+    pub right: Option<Rc<RefCell<TreeNode>>>,
 }
 
 impl TreeNode {
     pub fn new(val: i32) -> Self {
-        Self {
+        TreeNode {
             val,
             left: None,
             right: None,
@@ -51,25 +34,22 @@ impl TreeNode {
 pub struct Solution {}
 impl Solution {
     pub fn min_depth(root: Option<Rc<RefCell<TreeNode>>>) -> i32 {
-        let mut frontiers = VecDeque::new();
+        let Some(node) = root else {
+            return 0;
+        };
 
-        frontiers.push_back((root, 1));
-        while let Some((node, depth)) = frontiers.pop_front() {
-            let Some(node) = node else {
-                continue;
-            };
+        let node = node.borrow();
+        let left_depth = Self::min_depth(node.left.as_ref().map(Rc::clone));
+        let right_depth = Self::min_depth(node.right.as_ref().map(Rc::clone));
 
-            let node = node.borrow();
-            let is_leaf = node.left.is_none() && node.right.is_none();
-            if is_leaf {
-                return depth;
-            }
-
-            frontiers.push_back((node.left.as_ref().map(Rc::clone), depth + 1));
-            frontiers.push_back((node.right.as_ref().map(Rc::clone), depth + 1));
+        if left_depth == 0 {
+            return right_depth + 1;
+        }
+        if right_depth == 0 {
+            return left_depth + 1;
         }
 
-        0
+        left_depth.min(right_depth) + 1
     }
 }
 
@@ -132,13 +112,13 @@ mod tests {
     }
 
     #[test]
-    fn step2_helper_method_test() {
+    fn step2_dfs_helper_method_test() {
         let node_values = vec![Some(3), Some(9), Some(20), None, None, Some(15), Some(7)];
         assert_eq!(to_node_values(&to_tree_nodes(&node_values)), node_values);
     }
 
     #[test]
-    fn step2_test() {
+    fn step2_dfs_test() {
         let node_values = vec![Some(3)];
         let expect = 1;
         assert_eq!(Solution::min_depth(to_tree_nodes(&node_values)), expect);
