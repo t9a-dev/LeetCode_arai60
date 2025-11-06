@@ -1,23 +1,33 @@
-// Step3
-// 目的: 覚えられないのは、なんか素直じゃないはずなので、そこを探し、ゴールに到達する
-
-// 方法
-// 時間を測りながらもう一度解く
-// 10分以内に一度もエラーを吐かず正解
-// これを3回連続でできたら終わり
-// レビューを受ける
-// 作れないデータ構造があった場合は別途自作すること
+// Step4
+// 目的: 少し時間が余ったのでこれまでもらったレビューや、コメント集を調べる。
 
 /*
-  n = max(root1.len(),root2.len())
-  時間計算量: O(n)
-  空間計算量: O(n)
-*/
+  以前やった問題のレビューで再帰関数をiterativeにやってみるのも良いとのことだったのでやる。
+  https://github.com/t9a-dev/LeetCode_arai60/pull/19#discussion_r2486185608
 
-/*
-  1回目: 3分11秒
-  2回目: 3分8秒
-  3回目: 3分17秒
+  - 「末尾呼び出し」と「末尾呼び出しの最適化」
+  https://github.com/ichika0615/arai60/pull/7#discussion_r1877624318
+  https://www.fos.kuis.kyoto-u.ac.jp/~igarashi/class/pl/06-rec-iter.html#fnref2
+    - 「末尾呼び出し」 関数の返り値の位置にある関数呼出しのこと。
+    - 「末尾呼び出しの最適化」 末尾呼び出しをコンパイラやランタイムが検出して、スタックを再利用して実行すること。スタックオーバーフローが起きない。
+      - Rust言語は「末尾呼び出しの最適化」が行われないので、スタックオーバーフローを回避したい場合は明示的に繰り返し文にコードを書き換える必要がある。
+  - 末尾呼び出しがコンパイラによって最適化され、アセンブリにおいてcallによる関数呼出し部分がjmp命令によってループ文になっている。
+  （教育用のアセンブリしか読んだことが無いので雰囲気で読んでいる。）
+  https://discord.com/channels/1084280443945353267/1235829049511903273/1236314277305122868
+
+  - 再帰処理にするかどうかの簡単な判断基準
+  step1でキューを利用したBFSの実装を行おうとして考えて手が止まったので、この時点でBFSによる再帰処理の方に発想を転換できればよかったなと思った。
+  https://github.com/irohafternoon/LeetCode/pull/6#discussion_r2014558537
+  > ... なので、単純なループに近いときには再帰でわざわざ書くことはあまりないとは思います。ただ結構考えるときには使っています。
+
+  - 再帰を機械的に書き換えられるようになれば、理解できたと思って良さそう。
+  https://discord.com/channels/1084280443945353267/1235829049511903273/1238532375240249494
+
+  DFSを再帰ではない実装を写経しておく(自分で実装しようとしたが手が止まってしまった。)
+  行きがけ順(preorder traversal)処理になっている。
+  上から順にマージして子のノードを作っていくイメージなので、処理順序と名称に違和感を感じない。
+
+  自分はstep1_DFS.rsで実装した再帰処理の帰りがけ(postorder traversal)を見ると混乱するのが分かった。
 */
 
 use std::{cell::RefCell, rc::Rc};
@@ -52,17 +62,45 @@ impl Solution {
             return Some(node1);
         };
 
-        let (node1, node2) = (node1.borrow(), node2.borrow());
-        let merged_root = Rc::new(RefCell::new(TreeNode::new(node1.val + node2.val)));
+        let merged_root = Rc::new(RefCell::new(TreeNode::new(
+            node1.borrow().val + node2.borrow().val,
+        )));
+        let mut stack = Vec::new();
+        stack.push((
+            Rc::clone(&node1),
+            Rc::clone(&node2),
+            Rc::clone(&merged_root),
+        ));
 
-        merged_root.borrow_mut().left = Self::merge_trees(
-            node1.left.as_ref().map(Rc::clone),
-            node2.left.as_ref().map(Rc::clone),
-        );
-        merged_root.borrow_mut().right = Self::merge_trees(
-            node1.right.as_ref().map(Rc::clone),
-            node2.right.as_ref().map(Rc::clone),
-        );
+        while let Some((node1, node2, merged_node)) = stack.pop() {
+            let (node1, node2) = (node1.borrow(), node2.borrow());
+
+            match (&node1.left, &node2.left) {
+                (Some(left1), Some(left2)) => {
+                    let child = Rc::new(RefCell::new(TreeNode::new(
+                        left1.borrow().val + left2.borrow().val,
+                    )));
+                    merged_node.borrow_mut().left = Some(Rc::clone(&child));
+                    stack.push((Rc::clone(&left1), Rc::clone(&left2), Rc::clone(&child)));
+                }
+                (Some(left1), None) => merged_node.borrow_mut().left = Some(Rc::clone(&left1)),
+                (None, Some(left2)) => merged_node.borrow_mut().left = Some(Rc::clone(&left2)),
+                _ => (),
+            }
+
+            match (&node1.right, &node2.right) {
+                (Some(right1), Some(right2)) => {
+                    let child = Rc::new(RefCell::new(TreeNode::new(
+                        right1.borrow().val + right2.borrow().val,
+                    )));
+                    merged_node.borrow_mut().right = Some(Rc::clone(&child));
+                    stack.push((Rc::clone(&right1), Rc::clone(&right2), Rc::clone(&child)));
+                }
+                (Some(right1), None) => merged_node.borrow_mut().right = Some(Rc::clone(&right1)),
+                (None, Some(right2)) => merged_node.borrow_mut().right = Some(Rc::clone(&right2)),
+                _ => (),
+            }
+        }
 
         Some(merged_root)
     }
@@ -128,7 +166,7 @@ mod tests {
     }
 
     #[test]
-    fn step3_helper_method_test() {
+    fn step4_helper_method_test() {
         let node_values = vec![Some(3), Some(9), Some(20), None, None, Some(15), Some(7)];
         assert_eq!(
             binary_tree_to_vec(&vec_to_binary_tree(&node_values)),
@@ -137,7 +175,7 @@ mod tests {
     }
 
     #[test]
-    fn step3_test() {
+    fn step4_test() {
         let root1 = vec_to_binary_tree(&vec![Some(1)]);
         let root2 = vec_to_binary_tree(&vec![Some(1), Some(2)]);
         let expect = vec_to_binary_tree(&vec![Some(2), Some(2)]);

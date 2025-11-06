@@ -1,23 +1,16 @@
-// Step3
-// 目的: 覚えられないのは、なんか素直じゃないはずなので、そこを探し、ゴールに到達する
-
-// 方法
-// 時間を測りながらもう一度解く
-// 10分以内に一度もエラーを吐かず正解
-// これを3回連続でできたら終わり
-// レビューを受ける
-// 作れないデータ構造があった場合は別途自作すること
+// Step1_DFS
+// 目的: 別の解法を練習する。再帰によるDFS
 
 /*
-  n = max(root1.len(),root2.len())
-  時間計算量: O(n)
-  空間計算量: O(n)
-*/
+  問題の理解
+  - 2つの二分木が与えられるので、これらをマージして1つの二分木にして返す。
+  マージルールは以下
+  - 重なり合う位置のノードの値は合計する
+  - 重なり合うノードが無いノードはそのまま新しいノードとして利用する
 
-/*
-  1回目: 3分11秒
-  2回目: 3分8秒
-  3回目: 3分17秒
+  所感
+  - 再帰処理は特に迷うことなく書けた。明らかにこちらの方がシンプルで良いと感じた。
+    - 終了条件を正しく書いていったら通ったという感じなので、まだ再帰処理を書こうとして書けた感じは薄い。
 */
 
 use std::{cell::RefCell, rc::Rc};
@@ -53,18 +46,19 @@ impl Solution {
         };
 
         let (node1, node2) = (node1.borrow(), node2.borrow());
-        let merged_root = Rc::new(RefCell::new(TreeNode::new(node1.val + node2.val)));
+        let merged_node = Rc::new(RefCell::new(TreeNode::new(node1.val + node2.val)));
 
-        merged_root.borrow_mut().left = Self::merge_trees(
+        merged_node.borrow_mut().left = Self::merge_trees(
             node1.left.as_ref().map(Rc::clone),
             node2.left.as_ref().map(Rc::clone),
         );
-        merged_root.borrow_mut().right = Self::merge_trees(
+
+        merged_node.borrow_mut().right = Self::merge_trees(
             node1.right.as_ref().map(Rc::clone),
             node2.right.as_ref().map(Rc::clone),
         );
 
-        Some(merged_root)
+        Some(merged_node)
     }
 }
 
@@ -128,7 +122,7 @@ mod tests {
     }
 
     #[test]
-    fn step3_helper_method_test() {
+    fn step1_dfs_helper_method_test() {
         let node_values = vec![Some(3), Some(9), Some(20), None, None, Some(15), Some(7)];
         assert_eq!(
             binary_tree_to_vec(&vec_to_binary_tree(&node_values)),
@@ -137,7 +131,7 @@ mod tests {
     }
 
     #[test]
-    fn step3_test() {
+    fn step1_dfs_test() {
         let root1 = vec_to_binary_tree(&vec![Some(1)]);
         let root2 = vec_to_binary_tree(&vec![Some(1), Some(2)]);
         let expect = vec_to_binary_tree(&vec![Some(2), Some(2)]);
@@ -169,11 +163,6 @@ mod tests {
         let root1 = vec_to_binary_tree(&vec![None]);
         let root2 = vec_to_binary_tree(&vec![None]);
         let expect = vec_to_binary_tree(&vec![None]);
-        assert_eq!(Solution::merge_trees(root1, root2), expect);
-
-        let root1 = vec_to_binary_tree(&vec![None]);
-        let root2 = vec_to_binary_tree(&vec![]);
-        let expect = vec_to_binary_tree(&vec![]);
         assert_eq!(Solution::merge_trees(root1, root2), expect);
 
         let root1 = vec_to_binary_tree(&vec![]);
