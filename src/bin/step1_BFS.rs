@@ -1,11 +1,5 @@
-// Step1
-// 目的: 方法を思いつく
-
-// 方法
-// 5分考えてわからなかったら答えをみる
-// 答えを見て理解したと思ったら全部消して答えを隠して書く
-// 5分筆が止まったらもう一回みて全部消す
-// 正解したら終わり
+// Step1_BFS
+// 目的: 練習のためにBFSで実装する
 
 /*
   問題の理解
@@ -13,28 +7,14 @@
   height-balanced binary search treeは初めて聞いた。
   平衡二分探索木というもので、どのノードでも左右の木の高さになるべく差が出ないようにしている二分木のこと。
   https://ja.wikipedia.org/wiki/%E5%B9%B3%E8%A1%A1%E4%BA%8C%E5%88%86%E6%8E%A2%E7%B4%A2%E6%9C%A8
-  binary search tree（二分探索木）はあるノードの左の子が常にあるノードの右の子より小さくなる性質を持つ木構造のこと。
-  https://ja.wikipedia.org/wiki/%E4%BA%8C%E5%88%86%E6%8E%A2%E7%B4%A2%E6%9C%A8
 
-  何がわからなかったか
-  - WAしている時点で根のノード以降はノードの左又は右だけにノードをぶら下げているのがよく分からない。 <- 入力で与えられるノードの数が多ければこうならないことを理解した。
-
-  何を考えて解いていたか
-  - 与えられた配列の真ん中(木の根)の値をどのように求めるか。配列サイズ/2の解をそのまま配列の添字として利用できそう。
-  - 配列中央からのオフセットを表すoffsetを1からインクリメントしていきながら、ノードの値を取得する。
-  Rustではネガティブインデックスで配列アクセスできないのでヘルパーメソッドを実装して取得する。
-  2回WAしたので解答を見る。
-
-  解答をの理解
-  - 配列を真ん中(nums.len())で分割する。TreeNodeのleft,right用に分割している。
-  - 分割した配列を再帰で、左右のノードに設定する。
-
-  正解してから気づいたこと
-  - 根の値を求める方法にはたどり着いたが、左右のノードに入れる値を取得する順番が間違っていた。根のルートから外側に1つずつ見ていくと勘違いしていた。
-  - 配列を左右に分割するという手法を思いつかなかった。解き方のバリエーションに無いと自力でたどり着けないなと思った。
+  所感
+  - BFSとキューを利用した解法はすんなりと書けた。これまで解いてきた木構造を扱う問題とほとんど同じコードになっている。
+  あるデータ構造を操作するコードにはある程度パターンがあって、この操作のパターンで何をしているのかを理解さえしていれば変形して様々な問題に対応できるのかなどと考えた。
+  文章にしてみると当たり前のことしか書いていない気がするが、問題を一発で解けるかどうかに関わらず自分の反応が変化していることを感じた。
 */
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 
 pub struct TreeNode {
     val: i32,
@@ -55,18 +35,38 @@ impl TreeNode {
 pub struct Solution {}
 impl Solution {
     pub fn sorted_array_to_bst(nums: Vec<i32>) -> Option<Rc<RefCell<TreeNode>>> {
-        let nums_center = nums.len() / 2;
-        let Some(node_value) = nums.get(nums_center) else {
+        let Some(root_value) = Self::get_center_value(&nums) else {
             return None;
         };
 
-        let node = Rc::new(RefCell::new(TreeNode::new(*node_value)));
-        let (left_nums, right_nums) = (&nums[..nums_center], &nums[nums_center + 1..]);
+        let root = Rc::new(RefCell::new(TreeNode::new(root_value)));
+        let mut frontiers = VecDeque::new();
 
-        node.borrow_mut().left = Self::sorted_array_to_bst(left_nums.to_vec());
-        node.borrow_mut().right = Self::sorted_array_to_bst(right_nums.to_vec());
+        frontiers.push_back((Self::split_left_and_right(nums), Rc::clone(&root)));
+        while let Some(((left_values, right_values), node)) = frontiers.pop_front() {
+            if let Some(left_value) = Self::get_center_value(&left_values) {
+                let left_node = Rc::new(RefCell::new(TreeNode::new(left_value)));
+                node.borrow_mut().left = Some(Rc::clone(&left_node));
+                frontiers.push_back((Self::split_left_and_right(left_values), left_node));
+            }
 
-        Some(node)
+            if let Some(right_value) = Self::get_center_value(&right_values) {
+                let right_node = Rc::new(RefCell::new(TreeNode::new(right_value)));
+                node.borrow_mut().right = Some(Rc::clone(&right_node));
+                frontiers.push_back((Self::split_left_and_right(right_values), right_node));
+            }
+        }
+
+        Some(root)
+    }
+
+    fn split_left_and_right(nums: Vec<i32>) -> (Vec<i32>, Vec<i32>) {
+        let center = nums.len() / 2;
+        (nums[0..center].to_vec(), nums[center + 1..].to_vec())
+    }
+
+    fn get_center_value(nums: &Vec<i32>) -> Option<i32> {
+        nums.get(nums.len() / 2).cloned()
     }
 }
 
@@ -77,7 +77,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn step1_test() {
+    fn step1_bfs_test() {
         let node_values = vec![-10, -3, 0, 5, 9];
         let actual = binary_tree_to_vec(&Solution::sorted_array_to_bst(node_values));
         let expect = vec![Some(0), Some(-3), Some(9), Some(-10), None, Some(5)];
@@ -166,7 +166,7 @@ mod tests {
     }
 
     #[test]
-    fn step1_helper_method_test() {
+    fn step1_bfs_helper_method_test() {
         let node_values = vec![Some(3), Some(9), Some(20), None, None, Some(15), Some(7)];
         assert_eq!(
             binary_tree_to_vec(&vec_to_binary_tree(&node_values)),
