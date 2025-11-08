@@ -1,11 +1,5 @@
-// Step1
-// 目的: 方法を思いつく
-
-// 方法
-// 5分考えてわからなかったら答えをみる
-// 答えを見て理解したと思ったら全部消して答えを隠して書く
-// 5分筆が止まったらもう一回みて全部消す
-// 正解したら終わり
+// Step1_iterble_DFS
+// 目的: 反復DFSを実装してみる
 
 /*
   問題の理解
@@ -13,27 +7,12 @@
   二分木の根からリーフ（子を持たないノード）までに出現したノードの値の合計値がtarget_sumに等しい経路があればTrueを返す。
   見つからなければFalseを返す。
 
-  何がわからなかったか
-  - 最初は再帰によるDFSで解こうと思ったが、考えが上手くまとまらなくてBFSに切り替えた。
-  正解してから気づいたが、再帰云々の前に解法の考え方が良くなかった。
-  良くないと思った解法
-    - DFSで深さ優先探索して、帰りがけに辿ったノードの合計値を集めて、target_sumと等しいか見る。
-  途中で思いついて採用した解法
-    - DFS,BFS云々の前にtarget_sumから遭遇したノードの値を引いていく。リーフノードを見つけたらリーフノードの値との差が0であるかを確認する。
-
-  何を考えて解いていたか
-  - 再帰によるDFSでリーフノードを見つけるまで辿ったノードの合計値を算出して、target_sumとの差がないかで判定する。
-    ↑この考え方で解法がまとまらず筋が悪いと思ったので、別の思いついた解法を利用。
-  - 幅優先探索でtarget_sumから通ったノードの値を引いていく
-  - リーフを見つけたときにtarget_sumが0になっていればtrue
-  - DFSが終了してメソッドを抜けるときはtarget_sumを見つけられなかったので、falseを常に返す。
-
   正解してから気づいたこと
-  - borrow()はもう少しshadowingですっきりと書ける
-  - 再帰によるDFSがすぐ思いつかないので、コードの変形練習をした方が良さそう。
+  - コードを読み直して気付いたが、右側から見ていく（右側優先）DFSになっている。
+    - 今回の問題では関係ないが木が順序付きの場合に昇順から探索（左側優先）するか、降順から探索（右側優先）によって意識して実装する必要がある。
 */
 
-use std::{cell::RefCell, collections::VecDeque, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 pub struct TreeNode {
     pub val: i32,
@@ -57,27 +36,28 @@ impl Solution {
         let Some(root) = root else {
             return false;
         };
-        let mut frontiers = VecDeque::new();
+        let mut frontiers = Vec::new();
 
-        frontiers.push_back((Rc::clone(&root), target_sum));
-        while let Some((node, target_sum)) = frontiers.pop_front() {
+        frontiers.push((Rc::clone(&root), target_sum));
+        while let Some((node, target_sum)) = frontiers.pop() {
+            let node = node.borrow();
             let (left_node, right_node) = (
-                node.borrow().left.as_ref().map(Rc::clone),
-                node.borrow().right.as_ref().map(Rc::clone),
+                node.left.as_ref().map(Rc::clone),
+                node.right.as_ref().map(Rc::clone),
             );
+            let target_sum = target_sum - node.val;
             let is_leaf = left_node.is_none() && right_node.is_none();
 
-            if is_leaf && target_sum - node.borrow().val == 0 {
+            if is_leaf && target_sum == 0 {
                 return true;
             }
 
-            let target_sum = target_sum - node.borrow().val;
-
-            if let Some(left_node) = left_node {
-                frontiers.push_back((Rc::clone(&left_node), target_sum));
+            // ifの並び順を逆にすると右側優先探索から左側優先探索になる。
+            if let Some(node) = left_node {
+                frontiers.push((Rc::clone(&node), target_sum));
             }
-            if let Some(right_node) = right_node {
-                frontiers.push_back((Rc::clone(&right_node), target_sum));
+            if let Some(node) = right_node {
+                frontiers.push((Rc::clone(&node), target_sum));
             }
         }
 
@@ -87,10 +67,12 @@ impl Solution {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::VecDeque;
+
     use super::*;
 
     #[test]
-    fn step1_has_target_sum_test() {
+    fn step1_iterble_dfs_has_target_sum_test() {
         let node_values = vec![
             Some(5),
             Some(4),
@@ -127,7 +109,7 @@ mod tests {
     }
 
     #[test]
-    fn step1_has_not_target_sum_test() {
+    fn step1_iterble_dfs_has_not_target_sum_test() {
         let node_values = vec![Some(1), Some(2), Some(3)];
         let root = vec_to_binary_tree(&node_values);
         assert_eq!(Solution::has_path_sum(root, 5), false);
@@ -199,7 +181,7 @@ mod tests {
     }
 
     #[test]
-    fn step1_helper_method_test() {
+    fn step1_iterble_dfs_helper_method_test() {
         let node_values = vec![Some(3), Some(9), Some(20), None, None, Some(15), Some(7)];
         assert_eq!(
             binary_tree_to_vec(&vec_to_binary_tree(&node_values)),
