@@ -1,11 +1,5 @@
-// Step1
-// 目的: 方法を思いつく
-
-// 方法
-// 5分考えてわからなかったら答えをみる
-// 答えを見て理解したと思ったら全部消して答えを隠して書く
-// 5分筆が止まったらもう一回みて全部消す
-// 正解したら終わり
+// Step1_DFS
+// 目的: 再帰によるDFSを実装してみる
 
 /*
   問題の理解
@@ -13,27 +7,36 @@
   二分木の根からリーフ（子を持たないノード）までに出現したノードの値の合計値がtarget_sumに等しい経路があればTrueを返す。
   見つからなければFalseを返す。
 
-  何がわからなかったか
-  - 最初は再帰によるDFSで解こうと思ったが、考えが上手くまとまらなくてBFSに切り替えた。
-  正解してから気づいたが、再帰云々の前に解法の考え方が良くなかった。
-  良くないと思った解法
-    - DFSで深さ優先探索して、帰りがけに辿ったノードの合計値を集めて、target_sumと等しいか見る。
-  途中で思いついて採用した解法
-    - DFS,BFS云々の前にtarget_sumから遭遇したノードの値を引いていく。リーフノードを見つけたらリーフノードの値との差が0であるかを確認する。
-
   何を考えて解いていたか
-  - 再帰によるDFSでリーフノードを見つけるまで辿ったノードの合計値を算出して、target_sumとの差がないかで判定する。
-    ↑この考え方で解法がまとまらず筋が悪いと思ったので、別の思いついた解法を利用。
-  - 幅優先探索でtarget_sumから通ったノードの値を引いていく
-  - リーフを見つけたときにtarget_sumが0になっていればtrue
-  - DFSが終了してメソッドを抜けるときはtarget_sumを見つけられなかったので、falseを常に返す。
+  - 再帰によるDFSだと帰りがけのなるので、BFSで行った行きがけ（根からリーフまで階層を下っていく）とは違う。
+  - 再帰関数の設計は基本ケースと再帰ケースからなる。今回の問題における基本ケースと再帰ケースを考えてみる。
+    - 基本ケース
+      - リーフ（子ノードを持たない）であれば終了することは分かる。リーフノードの時点でtarget_sumとの差が0かどうかの結果をboolで返せばよいか？
+    - 再帰ケース
+      - left,rightにノードをそれぞれ再帰処理で実行する。target_sumにはnode.valを引いた値を渡す。
+      - left又はrightどちらかがTrueであればtarget_sumに一致するパスを見つけたと判定する。
+    BFSと違って早期リターンできず、常に全ての根まで見に行く必要がある気がして非効率な感覚がある。
 
   正解してから気づいたこと
-  - borrow()はもう少しshadowingですっきりと書ける
-  - 再帰によるDFSがすぐ思いつかないので、コードの変形練習をした方が良さそう。
+  - 一発で通るコードを書けたし、再帰を理解できていることを確認するために基本ケースと再帰ケースに分けて言語化してからコーディングしたが、まだおぼつかない感覚(若干の不安さ)が消えない。
+    - 繰り返し練習して、自信をつけるしかなさそう
+  - step1.rsのBFSと違って早期リターンができないので、こちらのDFSによる再帰の方が非効率だという感覚がある。実際どうなのか一応ChatGPT(GPT-5)に聞いてみる。
+   - 結論としては単純にどちらの解法が優れているということはない。与えられる木の状態に依存するため。また、DFSの場合でも || による判定で左辺がTrueであれば右辺は評価されないので早期リターンになっている。(左側で見つければ右側は見に行かない。)
+     - BFS（幅優先探索）
+       - 浅い位置の解を見つければ良いかつ極端に木の幅が広くないときに利用すると良さそう。木の幅が極端に広いと層ごとにキューに入れるので空間計算量的に不利になる。
+       - 完全二分木は幅が広くなり、深さがlog Nになる。今回の問題ではbinary treeとしか問題文にないので、幅が広いのか、高さが深いのか分からない。
+     - DFS（深さ優先探索）
+       - 幅が広い完全二分木かつ全探索が必要な場合に空間計算量が有利になる。一度に利用する補助空間計算量が木の深さO(log N)になるため。
+       - 直列になるような極端に深い二分木が入力として与えられると再帰によるDFSはスタックオーバーフローし得るので注意が必要。
+  - 今回の問題では、
+    - ノードの上限数が5000と事前に分かっている
+    - 再帰によるDFSの方がシンプルに記述できる
+    - 問題文から根から最短の位置に答えがあるとは読み取れない
+  以上の理由から、再帰によるDFSが良さそう。
+  iterable(反復的)なDFSも実装しておく。
 */
 
-use std::{cell::RefCell, collections::VecDeque, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 pub struct TreeNode {
     pub val: i32,
@@ -54,43 +57,34 @@ impl TreeNode {
 pub struct Solution {}
 impl Solution {
     pub fn has_path_sum(root: Option<Rc<RefCell<TreeNode>>>, target_sum: i32) -> bool {
-        let Some(root) = root else {
+        let Some(node) = root else {
             return false;
         };
-        let mut frontiers = VecDeque::new();
+        let node = node.borrow();
+        let is_leaf = node.left.is_none() && node.right.is_none();
+        let target_sum = target_sum - node.val;
 
-        frontiers.push_back((Rc::clone(&root), target_sum));
-        while let Some((node, target_sum)) = frontiers.pop_front() {
-            let (left_node, right_node) = (
-                node.borrow().left.as_ref().map(Rc::clone),
-                node.borrow().right.as_ref().map(Rc::clone),
-            );
-            let is_leaf = left_node.is_none() && right_node.is_none();
+        if is_leaf {
+            return target_sum == 0;
+        };
 
-            if is_leaf && target_sum - node.borrow().val == 0 {
-                return true;
-            }
+        let (left_node, right_node) = (
+            node.left.as_ref().map(Rc::clone),
+            node.right.as_ref().map(Rc::clone),
+        );
 
-            let target_sum = target_sum - node.borrow().val;
-
-            if let Some(left_node) = left_node {
-                frontiers.push_back((Rc::clone(&left_node), target_sum));
-            }
-            if let Some(right_node) = right_node {
-                frontiers.push_back((Rc::clone(&right_node), target_sum));
-            }
-        }
-
-        false
+        Self::has_path_sum(left_node, target_sum) || Self::has_path_sum(right_node, target_sum)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::VecDeque;
+
     use super::*;
 
     #[test]
-    fn step1_has_target_sum_test() {
+    fn step1_dfs_has_target_sum_test() {
         let node_values = vec![
             Some(5),
             Some(4),
@@ -127,7 +121,7 @@ mod tests {
     }
 
     #[test]
-    fn step1_has_not_target_sum_test() {
+    fn step1_dfs_has_not_target_sum_test() {
         let node_values = vec![Some(1), Some(2), Some(3)];
         let root = vec_to_binary_tree(&node_values);
         assert_eq!(Solution::has_path_sum(root, 5), false);
