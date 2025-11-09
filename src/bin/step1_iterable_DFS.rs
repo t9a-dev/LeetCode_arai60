@@ -1,40 +1,21 @@
-// Step2
-// 目的: 自然な書き方を考えて整理する
-
-// 方法
-// Step1のコードを読みやすくしてみる
-// 他の人のコードを2つは読んでみること
-// 正解したら終わり
-
-// 以下をメモに残すこと
-// 講師陣はどのようなコメントを残すだろうか？
-// 他の人のコードを読んで考えたこと
-// 改善する時に考えたこと
+// Step1_iterable_DFS
+// 目的: 反復(iterable)DFSを実装する
 
 /*
-  他の人のコードを読んで考えたこと
-  - ノードと階層をタプルでセットにして処理する方法しか思いつかなかったので、別で管理している人もいるのかと思った。
-  タプルで管理する方法が自分の解法の引き出しに無ければやるかなという感じ。
-  https://docs.google.com/document/d/11HV35ADPo9QxJOpJQ24FcZvtvioli770WWdZZDaLOfg/edit?tab=t.0#heading=h.ho7q4rvwsa1g
+  問題の理解
+  - 二分木の根が与えられるので、ノードの値を階層ごとの配列としてまとめて返す。
+  [[1],[2,3],[4,5,6,7]]になるという理解。
+      1
+     / \
+    2   3
+   / \ / \
+  4  5 6  7
 
-  - 解法の幅は殆ど無いだろうと思っていたがそうでもなかった。
-  とりあえずNoneも突っ込んで最後にfilterで取り除いていると理解した。
-  https://github.com/Satorien/LeetCode/pull/26/files#diff-90927eee773b5b7463148deda09c828069faa6ab54b7559cb40bcdf0849cc795R88
-
-  - メモリ領域を一度だけ確保しておいて再利用する最適化についての計算量見積もりが行われている。
-  自分はこのあたり実際の数字を見積もるのに苦手意識がある。
-  https://github.com/huyfififi/coding-challenges/pull/31#discussion_r2283764943
-
-  - Pythonだとマジックメソッド __bool__ で何がfalsyかを定義できるというのは知らなかった。
-  Rust的に言うと、ある構造体に対してTraitを実装するみたいな感じになるかななどと考えた。
-  https://github.com/Kazuryu0907/LeetCode_Arai60/pull/16#discussion_r2393855259
-  https://docs.python.org/ja/3.13/reference/datamodel.html#object.__bool__
-
-  改善する時に考えたこと
-  - 特になし
+  所感
+  - 以前解いた問題でiterble DFSを実装したときに、意識せずに右側優先探索(right-first)にしていたことがあったので気をつけて実装した。
 */
 
-use std::{cell::RefCell, collections::VecDeque, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 pub struct TreeNode {
     val: i32,
@@ -51,6 +32,7 @@ impl TreeNode {
         }
     }
 }
+
 pub struct Solution {}
 impl Solution {
     pub fn level_order(root: Option<Rc<RefCell<TreeNode>>>) -> Vec<Vec<i32>> {
@@ -58,10 +40,10 @@ impl Solution {
             return vec![];
         };
         let mut level_order_nodes: Vec<Vec<i32>> = Vec::new();
-        let mut frontiers = VecDeque::new();
+        let mut frontiers = Vec::new();
 
-        frontiers.push_back((root, 0));
-        while let Some((node, level)) = frontiers.pop_front() {
+        frontiers.push((root, 0));
+        while let Some((node, level)) = frontiers.pop() {
             let node = node.borrow();
 
             match level_order_nodes.get_mut(level) {
@@ -74,11 +56,12 @@ impl Solution {
                 node.right.as_ref().map(Rc::clone),
             );
 
-            if let Some(node) = left_node {
-                frontiers.push_back((node, level + 1));
-            }
             if let Some(node) = right_node {
-                frontiers.push_back((node, level + 1));
+                frontiers.push((node, level + 1));
+            }
+            // left-first DFS
+            if let Some(node) = left_node {
+                frontiers.push((node, level + 1));
             }
         }
 
@@ -88,10 +71,12 @@ impl Solution {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::VecDeque;
+
     use super::*;
 
     #[test]
-    fn step2_test() {
+    fn step1_iterable_dfs_test() {
         let root = vec_to_binary_tree(&vec![
             Some(3),
             Some(9),
@@ -175,7 +160,7 @@ mod tests {
     }
 
     #[test]
-    fn step2_helper_method_test() {
+    fn step1_iterable_dfs_helper_method_test() {
         let node_values = vec![Some(3), Some(9), Some(20), None, None, Some(15), Some(7)];
         assert_eq!(
             binary_tree_to_vec(&vec_to_binary_tree(&node_values)),
