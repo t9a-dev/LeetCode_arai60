@@ -1,23 +1,25 @@
-// Step3
-// 目的: 覚えられないのは、なんか素直じゃないはずなので、そこを探し、ゴールに到達する
-
-// 方法
-// 時間を測りながらもう一度解く
-// 10分以内に一度もエラーを吐かず正解
-// これを3回連続でできたら終わり
-// レビューを受ける
-// 作れないデータ構造があった場合は別途自作すること
+// Step1_DFS
+// 目的: 再帰によるDFSの実装を行う
 
 /*
-  n = nodes.len()
-  時間計算量: O(n) binary tree(二分木)としか問題文にないのでノードの数に依存。
-  空間計算量: O(n) binary tree(二分木)としか問題文にないのでノードの数に依存。
-*/
+  問題の理解
+  - 二分木の根が与えられるので階層ごとにノードを配列にまとめて返す。左側優先探索から開始して階層ごとに左右の探索方向をジグザグに切り替える。
+  以下の二分木の場合 [[1],[3,2],[4,5,6,7]] となる。
+      1
+     / \
+    2   3
+   / \ / \
+  4  5 6  7
 
-/*
-  1回目: 6分20秒
-  2回目: 5分16秒
-  3回目: 4分50秒
+  [[1],[3,2],[4,5]]
+      1
+     / \
+    2   3
+   /     \
+  4       5
+
+  所感
+  - 一応書いてみたが再帰処理にする必要性はないなと思った。
 */
 
 use std::{cell::RefCell, collections::VecDeque, rc::Rc};
@@ -44,46 +46,42 @@ impl Solution {
         let Some(root) = root else {
             return vec![];
         };
-        let mut level_order_nodes: Vec<Vec<i32>> = Vec::new();
-        let mut frontires = VecDeque::new();
+        let mut zigzag_level_order_nodes: Vec<VecDeque<_>> = Vec::new();
 
-        frontires.push_back((root, 0));
-        while let Some((node, level)) = frontires.pop_front() {
-            let node = node.borrow();
+        Self::collect_nodes_by_zigzag_level_order(&root, 0, &mut zigzag_level_order_nodes);
 
-            match level_order_nodes.get_mut(level) {
-                Some(nodes) => nodes.push(node.val),
-                None => level_order_nodes.push(vec![node.val]),
-            }
-
-            let (left_node, right_node) = (
-                node.left.as_ref().map(Rc::clone),
-                node.right.as_ref().map(Rc::clone),
-            );
-
-            if let Some(node) = left_node {
-                frontires.push_back((node, level + 1));
-            }
-            if let Some(node) = right_node {
-                frontires.push_back((node, level + 1));
-            }
-        }
-
-        Self::to_zigzag_order(level_order_nodes)
+        zigzag_level_order_nodes
+            .into_iter()
+            .map(|nodes| nodes.into_iter().collect::<Vec<_>>())
+            .collect()
     }
 
-    fn to_zigzag_order(mut level_order_nodes: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
-        for (i, nodes) in level_order_nodes.iter_mut().enumerate() {
-            let is_left_to_right_order = i % 2 == 0;
-            if is_left_to_right_order {
-                continue;
-            }
+    fn collect_nodes_by_zigzag_level_order(
+        node: &Rc<RefCell<TreeNode>>,
+        level: usize,
+        out: &mut Vec<VecDeque<i32>>,
+    ) {
+        let node = node.borrow();
+        let zigzag = level % 2 != 0;
 
-            let nodes: &mut Vec<_> = nodes.as_mut();
-            nodes.reverse();
+        match out.get_mut(level) {
+            Some(nodes) if zigzag => nodes.push_front(node.val),
+            Some(nodes) if !zigzag => nodes.push_back(node.val),
+            None => out.push(VecDeque::from_iter([node.val])),
+            _ => unreachable!(),
         }
 
-        level_order_nodes
+        let (left_node, right_node) = (
+            node.left.as_ref().map(Rc::clone),
+            node.right.as_ref().map(Rc::clone),
+        );
+
+        if let Some(node) = left_node {
+            Self::collect_nodes_by_zigzag_level_order(&node, level + 1, out);
+        }
+        if let Some(node) = right_node {
+            Self::collect_nodes_by_zigzag_level_order(&node, level + 1, out);
+        }
     }
 }
 
@@ -92,7 +90,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn step3_test() {
+    fn step1_test() {
         let root = vec_to_binary_tree(&vec![
             Some(3),
             Some(9),
@@ -184,7 +182,7 @@ mod tests {
     }
 
     #[test]
-    fn step3_helper_method_test() {
+    fn step1_helper_method_test() {
         let node_values = vec![Some(3), Some(9), Some(20), None, None, Some(15), Some(7)];
         assert_eq!(
             binary_tree_to_vec(&vec_to_binary_tree(&node_values)),
