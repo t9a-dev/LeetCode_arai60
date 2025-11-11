@@ -1,11 +1,5 @@
-// Step1
-// 目的: 方法を思いつく
-
-// 方法
-// 5分考えてわからなかったら答えをみる
-// 答えを見て理解したと思ったら全部消して答えを隠して書く
-// 5分筆が止まったらもう一回みて全部消す
-// 正解したら終わり
+// Step1_BFS
+// 目的: iterable BFSによる実装も行う
 
 /*
   問題の理解
@@ -16,29 +10,13 @@
     - 左と右のサブツリーもそれぞれ有効な二分探索木であること。
 
   何がわからなかったか
-  - 根から見たときのサブツリーに常に小さい、大きい値のノードしか含まれていないことを判定することをコードでうまく表現できない。
-
-  何を考えて解いていたか
-  - 二分探索木なので深さはlog nになるかなと思ったが、有効かどうかを判定する問題であるため、直列の木構造が入力されうる。
-  入力の制約上ノードの数は10^4なので、手元の実行環境のstacksizeが7MBであることを考えると、スタックオーバーフローは大丈夫そう。
-  ノードの参照を取り回すだけであることを考えて1スタックあたり8byte利用するとして、7,340,032byte / 8byte = 917,504となるので、ノードの数が91万以下なら大丈夫。
-  LeetCode採点システムのstacksizeは明示されていないので、見積もりはしない。
-
-  - 再帰DFSで解けると思う。左、右のノードが存在する場合にノードの値より小さい、大きいことをboolで返しながら、最終的に両方ともtrueであれば、有効な二分探索木と判定できると思う。
-  - 2回Wrong Answerとなり、修正方法が思いつかないので実装例を見る。
-
-  実装例の理解
-  https://leetcode.com/problems/validate-binary-search-tree/solutions/2409078/rust-yars-yet-another-recursive-solution-px5w/
-  - 再帰処理するときに、有効な二分探索木であることを判定するための下限、上限の境界値を渡している。
-  見ているノードがこの境界値の中に入っているかを判定している。
-    - 左ノードを再帰処理するときは上限を今のノードの値にして、小さい値しか許容しないようにしている
-    - 右ノードを再帰処理するときは下限を今のノードの値にして、大きい値しか許容しないようにしている
+  - 解法が分かっていたので得なし。
 
   正解してから気づいたこと
-  - 下限値・上限値にノードの値が収まっているのかを確認しつつ、下限値・上限値を更新していくという解法が思いつかなかった。
+  - 解法を知っていればそのままiterable BFSで実装できた
 */
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 
 pub struct TreeNode {
     val: i32,
@@ -61,31 +39,34 @@ impl Solution {
     pub fn is_valid_bst(root: Option<Rc<RefCell<TreeNode>>>) -> bool {
         // step2で気付いたがrootがNoneの場合でも有効な二分木として扱うべきなのでtrueを返すのが正しい。
         // https://github.com/potrue/leetcode/pull/28/files#r2153779987
-        if root.is_none() {
+        let Some(root) = root else {
             return false;
-        }
-        Self::validate_bst(root, i32::MIN as i64 - 1, i32::MAX as i64 + 1)
-    }
-
-    fn validate_bst(
-        node: Option<Rc<RefCell<TreeNode>>>,
-        lowwer_limit: i64,
-        upper_limit: i64,
-    ) -> bool {
-        let Some(node) = node else {
-            return true;
         };
-        let node = node.borrow();
-        let node_val = node.val as i64;
-        let valid = lowwer_limit < node_val && node_val < upper_limit;
-        let (left_node, right_node) = (
-            node.left.as_ref().map(Rc::clone),
-            node.right.as_ref().map(Rc::clone),
-        );
+        let mut frontiers = VecDeque::new();
+        let (lower_limit, upper_limit) = (i32::MIN as i64 - 1, i32::MAX as i64 + 1);
 
-        valid
-            && Self::validate_bst(left_node, lowwer_limit, node_val)
-            && Self::validate_bst(right_node, node_val, upper_limit)
+        frontiers.push_back((root, lower_limit, upper_limit));
+        while let Some((node, lower_limit, upper_limit)) = frontiers.pop_front() {
+            let node = node.borrow();
+            let node_val = node.val as i64;
+            let valid = lower_limit < node_val && node_val < upper_limit;
+            if !valid {
+                return false;
+            }
+
+            let (left_node, right_node) = (
+                node.left.as_ref().map(Rc::clone),
+                node.right.as_ref().map(Rc::clone),
+            );
+            if let Some(left_node) = left_node {
+                frontiers.push_back((left_node, lower_limit, node_val.into()));
+            }
+            if let Some(right_node) = right_node {
+                frontiers.push_back((right_node, node_val.into(), upper_limit));
+            }
+        }
+
+        true
     }
 }
 
@@ -96,7 +77,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn step1_test() {
+    fn step1_bfs_test() {
         let root = vec_to_binary_tree(&vec![Some(2), Some(1), Some(3)]);
         assert_eq!(Solution::is_valid_bst(root), true);
 
@@ -175,7 +156,7 @@ mod tests {
     }
 
     #[test]
-    fn step1_helper_method_test() {
+    fn step1_bfs_helper_method_test() {
         let node_values = vec![Some(3), Some(9), Some(20), None, None, Some(15), Some(7)];
         assert_eq!(
             binary_tree_to_vec(&vec_to_binary_tree(&node_values)),
