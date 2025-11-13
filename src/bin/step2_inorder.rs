@@ -1,33 +1,22 @@
-// Step3
-// 目的: 覚えられないのは、なんか素直じゃないはずなので、そこを探し、ゴールに到達する
-
-// 方法
-// 時間を測りながらもう一度解く
-// 10分以内に一度もエラーを吐かず正解
-// これを3回連続でできたら終わり
-// レビューを受ける
-// 作れないデータ構造があった場合は別途自作すること
+// Step2
+// 目的: 別の解法を写経する
+// https://github.com/ryosuketc/leetcode_arai60/pull/29/files#diff-862aaa72d065e55c50b5f200702e6b643025add3aff25f967bcda516b10bd786
 
 /*
-  n = preorder.len() == inorder.len()
-  時間計算量: O(n ^ 2) <- O(n)かと思ったが、再帰の中で毎回inorder.iter().preorder()していることを見逃していた。step4で一度HashMapを構築して渡す形に改善する。
-  空間計算量: O(n)
-*/
+  実装の理解
+  - preorderを先頭から順番にrootノードとして扱う。
+  - inorder[0]は一番左側のノードで、inorder.last()は一番右のノードになっている。
+  - preorderはindexが増えるにつれて階層が深くなる。preorder[0]がrootでpreorder.last()が底。
+  - あるノードをrootとして扱ったとき、rootノードの左右の子をinorderから探している。
+  - ただし、preorder_indexはインクリメントしていくので、preorderにおいて通り過ぎた値は子になりえない。
+  inorder,preorderのこのあたりの性質を理解して、さらに操作をコードに落とし込むのはかなり距離があるように感じる。
 
-/*
-  1回目: 7分36秒
-  2回目: 5分57秒
-  3回目: 5分47秒
-*/
-
-/*
   所感
-  - コード量の割に時間がかかっているのは、配列の境界を考えながら慎重にコーディングしていることが原因だと思う。
-  - 再帰の中で線形探索していることを見逃しておりGPT-5に指摘された。配列の境界を考えるのに精一杯で全く気が付かなかった。
-    - step4でHashMapを一度生成してから渡すように改善する。
+  - 書きやすい形に変形してみたが、再帰関数の基本ケース(returnするところ)でミスしてしまい、ChatGPT(GPT-5)を活用して修正した。
+  何をしているのか理解できていないことが原因だと思う。
+  時間切れなのでとりあえずここまで。
 */
-
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 #[derive(Debug, PartialEq)]
 pub struct TreeNode {
@@ -46,29 +35,61 @@ impl TreeNode {
     }
 }
 
+pub struct TreeBuilder {
+    preorder: Vec<i32>,
+    inorder: Vec<i32>,
+    inorder_value_to_index: HashMap<i32, usize>,
+}
+
+impl TreeBuilder {
+    pub fn new(preorder_node_values: Vec<i32>, inorder_node_values: Vec<i32>) -> Self {
+        let inorder_value_to_index = inorder_node_values
+            .iter()
+            .enumerate()
+            .map(|(i, v)| (*v, i))
+            .collect();
+        Self {
+            preorder: preorder_node_values,
+            inorder: inorder_node_values,
+            inorder_value_to_index: inorder_value_to_index,
+        }
+    }
+
+    pub fn build_tree(&self) -> Option<Rc<RefCell<TreeNode>>> {
+        let mut preorder_index = 0;
+        let inorder_right_index = self.inorder.len() as isize - 1;
+        self.build_tree_helper(0, inorder_right_index, &mut preorder_index)
+    }
+
+    fn build_tree_helper(
+        &self,
+        inorder_left_index: isize,
+        inorder_right_index: isize,
+        preorder_index: &mut usize,
+    ) -> Option<Rc<RefCell<TreeNode>>> {
+        if inorder_left_index > inorder_right_index {
+            return None;
+        };
+        // input_example: preorder = [3,9,20,15,7], inorder = [9,3,15,20,7]
+        let root_value = self.preorder.get(*preorder_index)?;
+        let root = Rc::new(RefCell::new(TreeNode::new(*root_value)));
+        let inorder_root_index = *self.inorder_value_to_index.get(root_value)? as isize;
+
+        *preorder_index += 1;
+        root.borrow_mut().left =
+            self.build_tree_helper(inorder_left_index, inorder_root_index - 1, preorder_index);
+        root.borrow_mut().right =
+            self.build_tree_helper(inorder_root_index + 1, inorder_right_index, preorder_index);
+
+        Some(root)
+    }
+}
+
 pub struct Solution {}
 impl Solution {
     pub fn build_tree(preorder: Vec<i32>, inorder: Vec<i32>) -> Option<Rc<RefCell<TreeNode>>> {
-        Self::build_tree_helper(&preorder, &inorder)
-    }
-
-    fn build_tree_helper(preorder: &[i32], inorder: &[i32]) -> Option<Rc<RefCell<TreeNode>>> {
-        let Some(root_val) = preorder.get(0) else {
-            return None;
-        };
-        let mut root = TreeNode::new(*root_val);
-
-        let inorder_root_index = inorder.iter().position(|v| v == root_val)?;
-        let inorder_left = &inorder[0..inorder_root_index];
-        let inorder_right = &inorder[inorder_root_index + 1..];
-
-        let preorder_left = &preorder[1..inorder_left.len() + 1];
-        let preorder_right = &preorder[inorder_left.len() + 1..];
-
-        root.left = Self::build_tree_helper(preorder_left, inorder_left);
-        root.right = Self::build_tree_helper(preorder_right, inorder_right);
-
-        Some(Rc::new(RefCell::new(root)))
+        let tree_builder = TreeBuilder::new(preorder, inorder);
+        tree_builder.build_tree()
     }
 }
 
@@ -79,7 +100,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn step3_test() {
+    fn step2_inorder_test() {
         let preorder = vec![3, 9, 20, 15, 7];
         let inorder = vec![9, 3, 15, 20, 7];
         let expect = vec_to_binary_tree(&vec![
@@ -168,7 +189,7 @@ mod tests {
     }
 
     #[test]
-    fn step3_helper_method_test() {
+    fn step2_inorder_helper_method_test() {
         let node_values = vec![Some(3), Some(9), Some(20), None, None, Some(15), Some(7)];
         assert_eq!(
             binary_tree_to_vec(&vec_to_binary_tree(&node_values)),
