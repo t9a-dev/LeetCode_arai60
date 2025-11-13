@@ -1,46 +1,13 @@
-// Step1
-// 目的: 方法を思いつく
-
-// 方法
-// 5分考えてわからなかったら答えをみる
-// 答えを見て理解したと思ったら全部消して答えを隠して書く
-// 5分筆が止まったらもう一回みて全部消す
-// 正解したら終わり
+// Step4
+// 目的: GPT-5によるレビューで指定された内容を修正
 
 /*
-  問題の理解
-  - 2つの整数配列preorderとinorderが与えられるので、二分木を構築して返す。これらの配列は同じ二分木を表している。
-    - preorder(行きがけ順)
-      - rootからスタートして左側優先探索する。
-    - inorder(通りがけ順)
-      - 一番深い左側のノードをスタートとする。現在のノード(根)->右側ノードと見ていく。見るノードが無いときは親ノードを見に行く。
-
-  何がわからなかったか
-  - inorder,preorderから規則性を読み取って二分木を構成する方法
-
-  何を考えて解いていたか
-  - preorderとinorderが与えられるので、それぞれの並び順から規則性を読み取って構築する必要がある。
-    - preorder[0]はrootノード,preorder[1],preorder[2]で最初のサブツリーを構築できる。
-  - 手が止まったので実装例を見て解法を理解する。
-
-  実装例を見た解法の理解
-  https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/solutions/4180058/0ms-rust-recursive-solution-with-explana-oqsj
-  - preorder[0]がrootのvalになる。
-  - root_valが分かったので、inorderにおけるroot_valのインデックスから、inorder_left,inorder_rightに配列を分ける。
-    - rootから見たときのinorder_leftは左部分木、inorder_rightは右部分木のノードの値を含む配列になる。
-  - preorderも左部分木(preorder_left)、右部分木(preorder_right)に分ける。
-    - preorder_left[1..1+inorder_left.len()] -> preorder[0]はルートなので飛ばす。inorder_leftには左部分木を構成するノードの値が入っているのでこのサイズ+1。
-      - +1しているのはRustのRange記号[a..b]においてbは開区間であり、bが含まれないので調整するために+1している。
-    - preorder_right[1 + inorder_left()..] -> root_val分の+1と左部分木を構成するノードのサイズを除いた分が右部分木を構成するノードの集合となる。
-  - preorderはroot_valueの位置を知っている。inorderは左右部分木の構成を知っている。という感じだろうか。
-
-  正解してから気づいたこと
-  - 左右部分木にうまく分けるように注目することが重要なのかなという感想。だいぶ混乱している。
-  - to_vec()でコピーしている箇所が無駄なので、step2ではヘルパーメソッドに切り出して参照で取り回すようにする。
-  - inorder_middle_indexは全然middle_indexではないので、別の名前にすべき。
+  n = preorder.len() == inorder.len()
+  時間計算量: O(n)
+  空間計算量: O(n)
 */
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 #[derive(Debug, PartialEq)]
 pub struct TreeNode {
@@ -62,18 +29,38 @@ impl TreeNode {
 pub struct Solution {}
 impl Solution {
     pub fn build_tree(preorder: Vec<i32>, inorder: Vec<i32>) -> Option<Rc<RefCell<TreeNode>>> {
-        let root_val = preorder.get(0)?;
+        let inorder_value_to_index = inorder
+            .iter()
+            .enumerate()
+            .map(|(i, v)| (*v, i))
+            .collect::<HashMap<i32, usize>>();
+        Self::build_tree_helper(&preorder, &inorder, &inorder_value_to_index)
+    }
+
+    fn build_tree_helper(
+        preorder: &[i32],
+        inorder: &[i32],
+        inorder_value_to_index: &HashMap<i32, usize>,
+    ) -> Option<Rc<RefCell<TreeNode>>> {
+        let Some(root_val) = preorder.get(0) else {
+            return None;
+        };
         let mut root = TreeNode::new(*root_val);
 
-        let inorder_middle_index = inorder.iter().position(|v| v == root_val)?;
-        let inorder_left = inorder[0..inorder_middle_index].to_vec();
-        let inorder_right = inorder[inorder_middle_index + 1..].to_vec();
+        let inorder_root_index = *inorder_value_to_index.get(root_val)?;
+        // inorderは分割されてどんどん減っていくので、sliceの先頭から今見ているノードの値までの左部分木のノードを数える必要がある。このロジックは自分で書けずGPT-5に聞いた。
+        let inorder_start_index = *inorder_value_to_index.get(&inorder[0])?;
+        let inorder_left_length = inorder_root_index - inorder_start_index;
 
-        let preorder_left = preorder[1..inorder_left.len() + 1].to_vec();
-        let preorder_right = preorder[inorder_left.len() + 1..].to_vec();
+        let inorder_left = &inorder.get(0..inorder_left_length)?;
+        let inorder_right = &inorder.get(inorder_left_length + 1..)?;
 
-        root.left = Self::build_tree(preorder_left, inorder_left);
-        root.right = Self::build_tree(preorder_right, inorder_right);
+        let preorder_left = &preorder.get(1..inorder_left_length + 1)?;
+        let preorder_right = &preorder.get(inorder_left_length + 1..)?;
+
+        root.left = Self::build_tree_helper(preorder_left, inorder_left, &inorder_value_to_index);
+        root.right =
+            Self::build_tree_helper(preorder_right, inorder_right, &inorder_value_to_index);
 
         Some(Rc::new(RefCell::new(root)))
     }
@@ -86,7 +73,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn step1_test() {
+    fn step4_test() {
         let preorder = vec![3, 9, 20, 15, 7];
         let inorder = vec![9, 3, 15, 20, 7];
         let expect = vec_to_binary_tree(&vec![
@@ -175,7 +162,7 @@ mod tests {
     }
 
     #[test]
-    fn step1_helper_method_test() {
+    fn step4_helper_method_test() {
         let node_values = vec![Some(3), Some(9), Some(20), None, None, Some(15), Some(7)];
         assert_eq!(
             binary_tree_to_vec(&vec_to_binary_tree(&node_values)),
