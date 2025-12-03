@@ -1,56 +1,40 @@
-// Step3
-// 目的: 覚えられないのは、なんか素直じゃないはずなので、そこを探し、ゴールに到達する
-
-// 方法
-// 時間を測りながらもう一度解く
-// 10分以内に一度もエラーを吐かず正解
-// これを3回連続でできたら終わり
-// レビューを受ける
-// 作れないデータ構造があった場合は別途自作すること
-
-/*
-  n = s.len()
-  m = word_dict.len()
-  L = max(word_dict[i].len())
-  時間計算量: O(m * n * L) <- O(n * m)だと思ったが文字列同士の比較の線形探索の時間計算量を見落としていた。
-  空間計算量: O(n)
-*/
-
-/*
-  1回目: 3分51秒
-  2回目: 3分6秒
-  3回目: 2分1秒
-*/
+// Step2a_dp
+// 目的: DP実装を練習する。DP配列を先頭から末尾に書けて見るバージョン
 
 /*
   所感
-  - 暗記で書いている感じが強い。こうするとこうなるからこうという感じ。
+  - DP配列を先頭から末尾に向けて走査する方法だと手が止まって解けなかった。時間切れなのでGPT-5.1に聞く
+  - 空文字をtrueとしてdp[0]をtrueとする。<- 直感に反するので腹落ちしない
+  - dp[0]をtrueとした時、一致する単語の長さdp[i+word.len()] = true　をする前に、それまでに出現した文字列[i+word.len()]がtrueであることを確認する必要がある。
+  dp[i+word.len()] がtrueでない時単語を分割しきれていない。 <- ここもよく分からない。
+  時間切れなので写経のみとする
 */
 
 pub struct Solution {}
 impl Solution {
     pub fn word_break(s: String, word_dict: Vec<String>) -> bool {
         let mut segmentable_words = vec![false; s.len() + 1];
-        segmentable_words[s.len()] = true;
+        segmentable_words[0] = true;
 
-        for i in (0..s.len()).rev() {
+        for i in 0..s.len() {
             for word in &word_dict {
-                let Some(peeked_s) = s.get(i..i + word.len()) else {
+                let Some(peeked_word) = s.get(i..i + word.len()) else {
                     continue;
                 };
 
-                if peeked_s != word {
+                if peeked_word != word {
                     continue;
                 }
 
-                segmentable_words[i] = segmentable_words[i + word.len()];
-                if segmentable_words[i] {
+                if !segmentable_words[i] {
                     break;
                 }
+
+                segmentable_words[i + word.len()] = true;
             }
         }
 
-        segmentable_words[0]
+        *segmentable_words.last().unwrap()
     }
 }
 
@@ -59,7 +43,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn step3_test() {
+    fn step2b_test() {
         let s = "leetcode".to_string();
         let word_list = vec!["leet", "code"]
             .into_iter()
