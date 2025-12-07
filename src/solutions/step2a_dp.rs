@@ -52,10 +52,11 @@ impl Solution {
             .collect::<Vec<_>>();
 
         let sentinel_coin_count = amount + 1;
-        let mut amount_to_coin_count = vec![sentinel_coin_count; (amount + 1) as usize];
+        let amount = amount as usize;
+        let mut amount_to_coin_count = vec![sentinel_coin_count; amount + 1];
         amount_to_coin_count[0] = 0;
 
-        for current_amount in 1..amount as usize + 1 {
+        for current_amount in 1..amount + 1 {
             for coin in &coins {
                 let Some(remaining_amount) = current_amount.checked_sub(*coin as usize) else {
                     continue;
@@ -66,11 +67,11 @@ impl Solution {
             }
         }
 
-        if amount_to_coin_count[amount as usize] == sentinel_coin_count {
+        if amount_to_coin_count[amount] == sentinel_coin_count {
             return Self::COMBINATION_NOT_FOUND;
         }
 
-        amount_to_coin_count[amount as usize]
+        amount_to_coin_count[amount]
     }
 }
 
