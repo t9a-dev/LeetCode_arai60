@@ -49,6 +49,7 @@ impl Interval {
         Ok(Self { start, end })
     }
 }
+
 pub struct Solution {}
 impl Solution {
     pub fn can_attend_meetings(mut intervals: Vec<Interval>) -> bool {
