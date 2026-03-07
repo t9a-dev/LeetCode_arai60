@@ -34,13 +34,9 @@ impl Solution {
             t_char_to_indecies.entry(c).or_default().push(i);
         }
 
-        for s in s_list {
-            if Self::is_subsequence_helper(&s, &t_char_to_indecies) {
-                return true;
-            }
-        }
-
-        false
+        s_list
+            .iter()
+            .any(|s| Self::is_subsequence_helper(s, &t_char_to_indecies))
     }
 
     fn is_subsequence_helper(s: &str, t_char_to_indecies: &HashMap<char, Vec<usize>>) -> bool {
